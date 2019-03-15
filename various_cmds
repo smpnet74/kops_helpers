@@ -1,0 +1,24 @@
+
+export AWS_ACCESS_KEY_ID=`curl http://169.254.169.254/latest/meta-data/iam/security-credentials/test_ec2_role 2>/dev/null | jq -r .AccessKeyId`
+export AWS_SECRET_KEY=`curl http://169.254.169.254/latest/meta-data/iam/security-credentials/test_ec2_role 2>/dev/null | jq -r .SecretAccessKey`
+export AWS_SESSION_TOKEN=`curl http://169.254.169.254/latest/meta-data/iam/security-credentials/test_ec2_role 2>/dev/null | jq -r .Token`
+export KOPS_STATE_STORE=s3://cloud9-941497602196-sam-deployments-us-east-1
+export VPC_ID=vpc-02ce3c582cd4ebbff
+export SUBNET_ID=subnet-003582309bc21e5b1
+export NETWORK_CIDR=172.31.0.0/16
+export SUBNET_CIDR=172.31.0.0/20
+export NAME=test5.domainsandbox.net
+maxPrice: "0.07"
+
+kops edit cluster ${NAME}
+kops update cluster --name ${NAME} --out=. --target=terraform
+
+/usr/local/bin/kops export kubecfg ${NAME}
+
+curl http://169.254.169.254/latest/meta-data/public-ipv4
+
+printf $(kubectl get secret --namespace default my-release-jenkins -o jsonpath="{.data.jenkins-admin-password}" | base64 --decode);echo
+export SERVICE_IP=$(kubectl get svc --namespace default my-release-jenkins --template "{{ range (index .status.loadBalancer.ingress 0) }}{{ . }}{{ end }}")
+echo http://$SERVICE_IP:8080/login
+
+helm del --purge my-release
