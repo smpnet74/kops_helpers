@@ -22,3 +22,5 @@ export SERVICE_IP=$(kubectl get svc --namespace default my-release-jenkins --tem
 echo http://$SERVICE_IP:8080/login
 
 helm del --purge my-release
+
+sudo sshfs -o allow_other,defer_permissions ec2-user@18.208.204.87:/home/ec2-user/environment/kops_helpers/ //Users/speterson/Documents/kops
