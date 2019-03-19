@@ -1,4 +1,4 @@
-curl http://169.254.169.254/latest/meta-data/public-ipv4
+##Set the cloud9 instance role
 
 ##Necessary binaries
 curl -LO https://github.com/kubernetes/kops/releases/download/$(curl -s https://api.github.com/repos/kubernetes/kops/releases/latest | grep tag_name | cut -d '"' -f 4)/kops-linux-amd64
