@@ -24,3 +24,15 @@ echo http://$SERVICE_IP:8080/login
 helm del --purge my-release
 
 sudo sshfs -o allow_other,defer_permissions ec2-user@18.208.204.87:/home/ec2-user/environment/kops_helpers/ //Users/speterson/Documents/kops
+
+curl -LO https://github.com/kubernetes/kops/releases/download/$(curl -s https://api.github.com/repos/kubernetes/kops/releases/latest | grep tag_name | cut -d '"' -f 4)/kops-linux-amd64
+chmod +x kops-linux-amd64
+sudo mv kops-linux-amd64 /usr/local/bin/kops
+wget https://releases.hashicorp.com/terraform/0.11.13/terraform_0.11.13_linux_amd64.zip
+unzip ./terraform*
+chmod +X terraform
+sudo mv terraform /usr/local/bin
+rm ./terraform*
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/darwin/amd64/kubectl
+chmod +x ./kubectl
+sudo mv ./kubectl /usr/local/bin/kubectl
