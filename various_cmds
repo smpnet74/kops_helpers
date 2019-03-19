@@ -1,3 +1,23 @@
+curl http://169.254.169.254/latest/meta-data/public-ipv4
+
+##Necessary binaries
+curl -LO https://github.com/kubernetes/kops/releases/download/$(curl -s https://api.github.com/repos/kubernetes/kops/releases/latest | grep tag_name | cut -d '"' -f 4)/kops-linux-amd64
+chmod +x kops-linux-amd64
+sudo mv kops-linux-amd64 /usr/local/bin/kops
+wget https://releases.hashicorp.com/terraform/0.11.13/terraform_0.11.13_linux_amd64.zip
+unzip ./terraform*
+chmod +X terraform
+sudo mv terraform /usr/local/bin
+rm ./terraform*
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+chmod +x ./kubectl
+sudo mv ./kubectl /usr/local/bin/kubectl
+wget https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+chmod +x ./jq-linux64
+sudo mv ./jq-linux64 /usr/local/bin/jq
+
+
+##Variables required to be set to run a KOPS create
 
 export AWS_ACCESS_KEY_ID=`curl http://169.254.169.254/latest/meta-data/iam/security-credentials/test_ec2_role 2>/dev/null | jq -r .AccessKeyId`
 export AWS_SECRET_KEY=`curl http://169.254.169.254/latest/meta-data/iam/security-credentials/test_ec2_role 2>/dev/null | jq -r .SecretAccessKey`
@@ -7,15 +27,42 @@ export VPC_ID=vpc-02ce3c582cd4ebbff
 export SUBNET_ID=subnet-003582309bc21e5b1
 export NETWORK_CIDR=172.31.0.0/16
 export SUBNET_CIDR=172.31.0.0/20
-export NAME=test5.domainsandbox.net
+export NODE_SIZE=t2.xlarge
+export MASTER_SIZE=t2.large
+export ZONES=us-east-1a
+export NAME=atlantis1.domainsandbox.net
+
+##Create a pub keypair, create the secret, create the cluster config
+ssh-keygen -t rsa
+kops create secret --name $NAME sshpublickey admin -i ~/.ssh/id_rsa.pub
+kops create cluster $NAME \
+  --node-count 3 \
+  --zones $ZONES \
+  --node-size $NODE_SIZE \
+  --master-size $MASTER_SIZE \
+  --master-zones $ZONES \
+  --networking calico \
+  --vpc $VPC_ID \
+  --network-cidr $NETWORK_CIDR \
+  --subnets $SUBNET_ID
+  
+##Edit the cluster and change 0.0.0.0 security groups to output of curl
+##This will focus security groups on cloud9 instance
+curl http://169.254.169.254/latest/meta-data/public-ipv4
+kops edit cluster ${NAME}
+  
+## Edit the instance group for the nodes and set the max price spot to .07
+kops edit ig nodes --name $NAME
 maxPrice: "0.07"
 
+## Update the cluster and output to terraform
 kops edit cluster ${NAME}
 kops update cluster --name ${NAME} --out=. --target=terraform
 
-/usr/local/bin/kops export kubecfg ${NAME}
+## Run a terraform init and terraform plan
 
-curl http://169.254.169.254/latest/meta-data/public-ipv4
+## Export the kubecfg configuration and apply it so kubectl works
+/usr/local/bin/kops export kubecfg ${NAME}
 
 printf $(kubectl get secret --namespace default my-release-jenkins -o jsonpath="{.data.jenkins-admin-password}" | base64 --decode);echo
 export SERVICE_IP=$(kubectl get svc --namespace default my-release-jenkins --template "{{ range (index .status.loadBalancer.ingress 0) }}{{ . }}{{ end }}")
@@ -33,6 +80,10 @@ unzip ./terraform*
 chmod +X terraform
 sudo mv terraform /usr/local/bin
 rm ./terraform*
-curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/darwin/amd64/kubectl
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
 chmod +x ./kubectl
 sudo mv ./kubectl /usr/local/bin/kubectl
+wget https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+chmod +x ./jq-linux64
+sudo mv ./jq-linux64 /usr/local/bin/jq
+
